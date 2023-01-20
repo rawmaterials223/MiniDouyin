@@ -1,9 +1,10 @@
 package controller
 
 import (
-	"github.com/gin-gonic/gin"
 	"net/http"
-	"sync/atomic"
+
+	"github.com/gin-gonic/gin"
+	"github.com/rawmaterials223/MiniDouyin/service"
 )
 
 // usersLoginInfo use map to store user info, and key is username+password for demo
@@ -19,7 +20,7 @@ var usersLoginInfo = map[string]User{
 	},
 }
 
-var userIdSequence = int64(1)
+//var userIdSequence = int64(1)
 
 type UserLoginResponse struct {
 	Response
@@ -36,24 +37,33 @@ func Register(c *gin.Context) {
 	username := c.Query("username")
 	password := c.Query("password")
 
-	token := username + password
+	//token := username + password
 
-	if _, exist := usersLoginInfo[token]; exist {
-		c.JSON(http.StatusOK, UserLoginResponse{
-			Response: Response{StatusCode: 1, StatusMsg: "User already exist"},
-		})
+	// receive the result from service layer
+	// return userId AND token
+	// if register failed, StatusMsg can be taken from err.Error()
+	userId, token, err := service.Register(username, password)
+
+	// TODO: 验证err(RegisterError) 是否为空
+	if err != nil {
+		c.JSON(
+			http.StatusOK,
+			UserLoginResponse{
+				Response: Response{
+					StatusCode: 1,
+					StatusMsg:  err.Error(),
+				},
+			})
 	} else {
-		atomic.AddInt64(&userIdSequence, 1)
-		newUser := User{
-			Id:   userIdSequence,
-			Name: username,
-		}
-		usersLoginInfo[token] = newUser
-		c.JSON(http.StatusOK, UserLoginResponse{
-			Response: Response{StatusCode: 0},
-			UserId:   userIdSequence,
-			Token:    username + password,
-		})
+		c.JSON(
+			http.StatusOK,
+			UserLoginResponse{
+				Response: Response{
+					StatusCode: 0,
+				},
+				UserId: userId,
+				Token:  token,
+			})
 	}
 }
 

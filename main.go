@@ -2,12 +2,12 @@ package main
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/rawmaterials223/MiniDouyin/controller"
 	"github.com/rawmaterials223/MiniDouyin/repository"
-	"github.com/rawmaterials223/MiniDouyin/service"
 )
 
 func main() {
-	go service.RunMessageServer()
+	go controller.RunMessageServer()
 
 	if err := Init(); err != nil {
 		return

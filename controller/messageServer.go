@@ -1,4 +1,7 @@
-package service
+// 原文件位于 service/message.go
+// 现文件位于 controller/messageServer.go
+
+package controller
 
 import (
 	"encoding/json"
@@ -6,8 +9,6 @@ import (
 	"io"
 	"net"
 	"sync"
-
-	"github.com/rawmaterials223/MiniDouyin/controller"
 )
 
 var chatConnMap = sync.Map{}
@@ -44,7 +45,7 @@ func process(conn net.Conn) {
 			continue
 		}
 
-		var event = controller.MessageSendEvent{}
+		var event = MessageSendEvent{}
 		_ = json.Unmarshal(buf[:n], &event)
 		fmt.Printf("Receive Message：%+v\n", event)
 
@@ -61,7 +62,7 @@ func process(conn net.Conn) {
 			continue
 		}
 
-		pushEvent := controller.MessagePushEvent{
+		pushEvent := MessagePushEvent{
 			FromUserId: event.UserId,
 			MsgContent: event.MsgContent,
 		}
