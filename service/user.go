@@ -1,11 +1,19 @@
 package service
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"time"
 
 	"github.com/rawmaterials223/MiniDouyin/repository"
 )
+
+func Md5(str string) string {
+	h := md5.New()
+	h.Write([]byte(str))
+	return hex.EncodeToString(h.Sum(nil))
+}
 
 type RegisterError struct {
 	Status  int
@@ -27,7 +35,7 @@ func NewRegisterFlow(username string, password string) *UserFlow {
 	}
 }
 
-func Login(username string, password string) (string, error) {
+func Login(username string, password string) (int64, string, error) {
 	return NewLoginFlow(username, password).DoLogin()
 }
 
@@ -49,37 +57,54 @@ type UserFlow struct {
 func (f *UserFlow) DoRegister() (int64, string, error) {
 
 	// check if user existed
-	if err := f.IsExistedUser(); err == nil {
-		return 0, "", &RegisterError{1, "user existed"}
+	exist, _ := f.IsExistedUser()
+	if exist {
+		return 0, "", &RegisterError{1, "register error: user existed"}
 	}
 
 	// register
 	if err := f.CreateUser(); err != nil {
 		return 0, "", err
 	}
-
-	return f.userId, f.token, &RegisterError{Status: 0}
+	// 注册成功后返回ID和token
+	return f.userId, f.token, nil
 }
 
-// TODO: check if user existed
-// user exist return nil
-// else return RegisterError
-func (f *UserFlow) IsExistedUser() error {
+func (f *UserFlow) DoLogin() (int64, string, error) {
 
-	user := &repository.User{
-		Name:  f.username,
-		Token: f.token,
+	// check if user existed
+	exist, _ := f.IsExistedUser()
+	if !exist {
+		return 0, "", &RegisterError{1, "register error: user doesn't exist"}
 	}
+
+	// 登录成功后返回ID和token
+	return f.userId, f.token, nil
+}
+
+// 功能：检查用户是否存在
+// 用户存在-(true, nil)
+// 用户不存在-(false, err)
+func (f *UserFlow) IsExistedUser() (bool, error) {
 
 	// receive result from repository layer
-	if err := repository.NewUserDaoInstance().CheckUser(user); err != nil {
-		return &RegisterError{Status: 1, Message: "User doesn't exist"}
+	// user exist return (&user, nil)
+	// doesn't exist return (nil, nil)
+	// other error return(nil, err)
+	user, err := repository.NewUserDaoInstance().QueryUserByNameToken(f.username, f.username+f.password)
+	// 用户不存在或查找出错
+	if err != nil {
+		return false, err
 	}
 
-	// TODO: token的获取方式待定
+	fmt.Println("QueryUserByNameToken success")
+
+	f.userId = user.Id
 	f.token = user.Token
 
-	return nil
+	fmt.Printf("isExistedUser userId = %d", f.userId)
+
+	return true, nil
 }
 
 func (f *UserFlow) CreateUser() error {
@@ -93,19 +118,13 @@ func (f *UserFlow) CreateUser() error {
 	// receive result from repository layer
 	// if insert failed, return error message
 	if err := repository.NewUserDaoInstance().CreateUser(user); err != nil {
-		return &RegisterError{Status: 1, Message: "failed"} // TODO: err message待定
+		return err
 	}
 
 	f.userId = user.Id
 	f.token = user.Token
 
+	fmt.Printf("CreateUser userId = %d", f.userId)
+
 	return nil
-}
-
-func (f *UserFlow) DoLogin() (string, error) {
-	if err := f.IsExistedUser(); err != nil {
-		return "", &RegisterError{1, "user doesn't exist"}
-	}
-
-	return f.token, nil
 }

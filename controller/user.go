@@ -24,7 +24,7 @@ var usersLoginInfo = map[string]User{
 
 type UserLoginResponse struct {
 	Response
-	UserId int64  `json:"user_id,omitempty"`
+	UserId int64  `json:"user_id"`
 	Token  string `json:"token"`
 }
 
@@ -37,15 +37,14 @@ func Register(c *gin.Context) {
 	username := c.Query("username")
 	password := c.Query("password")
 
-	//token := username + password
-
 	// receive the result from service layer
 	// return userId AND token
 	// if register failed, StatusMsg can be taken from err.Error()
+	// 注册成功返回id, token, err/nil
+	// 注册失败返回0, "", err/nil
 	userId, token, err := service.Register(username, password)
 
-	// TODO: 验证err(RegisterError) 是否为空
-	if err != nil {
+	if userId == 0 && token == "" && err != nil {
 		c.JSON(
 			http.StatusOK,
 			UserLoginResponse{
@@ -71,18 +70,32 @@ func Login(c *gin.Context) {
 	username := c.Query("username")
 	password := c.Query("password")
 
-	token := username + password
+	//token := username + password
 
-	if user, exist := usersLoginInfo[token]; exist {
-		c.JSON(http.StatusOK, UserLoginResponse{
-			Response: Response{StatusCode: 0},
-			UserId:   user.Id,
-			Token:    token,
-		})
+	// receive the result from service layer
+	// return userid AND token
+	// if user doesn't exist return err, else return nil
+	userid, token, err := service.Login(username, password)
+
+	if userid == 0 && token == "" && err != nil {
+		c.JSON(
+			http.StatusOK,
+			UserLoginResponse{
+				Response: Response{
+					StatusCode: 1,
+					StatusMsg:  err.Error(),
+				},
+			})
 	} else {
-		c.JSON(http.StatusOK, UserLoginResponse{
-			Response: Response{StatusCode: 1, StatusMsg: "User doesn't exist"},
-		})
+		c.JSON(
+			http.StatusOK,
+			UserLoginResponse{
+				Response: Response{
+					StatusCode: 0,
+				},
+				UserId: userid,
+				Token:  token,
+			})
 	}
 }
 

@@ -70,6 +70,10 @@ CREATE TABLE `comment`
     `user_id`       bigint(20) unsigned NOT NULL,
     `content`       text                NOT NULL,
     `create_time`   timestamp           NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (`id`),
+    PRIMARY KEY (`id`)
 ) ENGINE = InnoDB
     DEFAULT CHARSET = utf8mb4 COMMENT = '评论表';
+
+
+INSERT INTO `userinfo`
+VALUES(1, 'lulingyi', 'lulingyiroot123','2023-1-21 10:00:00');
