@@ -16,19 +16,8 @@ type User struct {
 	CreateTime time.Time `gorm:"column:create_time"`
 }
 
-type UserRelation struct {
-	Id         int64 `gorm:"column:id"`
-	FromUserId int64 `gorm:"column:from_user_id"`
-	ToUserId   int64 `gorm:"column:to_user_id"`
-	IsFollow   bool  `gorm:"column:is_follow"`
-}
-
 func (User) TableName() string {
 	return "userinfo"
-}
-
-func (UserRelation) TableName() string {
-	return "userrelation"
 }
 
 type UserDao struct {

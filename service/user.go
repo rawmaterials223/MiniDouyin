@@ -15,12 +15,12 @@ func Md5(str string) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-type RegisterError struct {
+type ResponseError struct {
 	Status  int
 	Message string
 }
 
-func (r *RegisterError) Error() string {
+func (r *ResponseError) Error() string {
 	return fmt.Sprintf("%v", r.Message)
 }
 
@@ -59,7 +59,7 @@ func (f *UserFlow) DoRegister() (int64, string, error) {
 	// check if user existed
 	exist, _ := f.IsExistedUser()
 	if exist {
-		return 0, "", &RegisterError{1, "register error: user existed"}
+		return 0, "", &ResponseError{1, "register error: user existed"}
 	}
 
 	// register
@@ -75,7 +75,7 @@ func (f *UserFlow) DoLogin() (int64, string, error) {
 	// check if user existed
 	exist, _ := f.IsExistedUser()
 	if !exist {
-		return 0, "", &RegisterError{1, "register error: user doesn't exist"}
+		return 0, "", &ResponseError{1, "register error: user doesn't exist"}
 	}
 
 	// 登录成功后返回ID和token
