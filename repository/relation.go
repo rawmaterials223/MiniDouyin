@@ -16,6 +16,12 @@ type UserRelation struct {
 	IsFollow   int   `gorm:"column:is_follow"`
 }
 
+type UserRelationCount struct {
+	FollowCount   int  `json:"follow_count"`
+	FollowerCount int  `json:"follower_count"`
+	IsFollow      bool `json:"is_follow"`
+}
+
 func (UserRelation) TableName() string {
 	return "userrelation"
 }
@@ -102,4 +108,20 @@ func (*RelationDao) CreateRelation(relation *UserRelation) error {
 	}
 
 	return nil
+}
+
+// 查询：计算用户的关注数和粉丝数
+func (*RelationDao) CalculateRelation(uid int64) (int64, int64, error) {
+	var follow_count int64
+	var follower_count int64
+
+	// follow_count
+	// SQL: select count(*) from `userrelation` where from_user_id = x and is_follow = 1;
+	db.Model(&UserRelation{}).Where("from_user_id = ? AND is_follow = ?", uid, 1).Count(&follow_count)
+
+	// follower_count
+	// SQL: select count(*) from `userrelation` where to_user_id = x and is follow = 1;
+	db.Model(&UserRelation{}).Where("to_user_id = ? AND is_follow = ?", uid, 1).Count(&follower_count)
+
+	return follow_count, follower_count, nil
 }

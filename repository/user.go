@@ -11,10 +11,10 @@ import (
 )
 
 type User struct {
-	Id         int64     `gorm:"column:id"`
-	Name       string    `gorm:"column:name"`
-	Token      string    `gorm:"column:token"`
-	CreateTime time.Time `gorm:"column:create_time"`
+	Id         int64     `gorm:"column:id" json:"id"`
+	Name       string    `gorm:"column:name" json:"name"`
+	Token      string    `gorm:"column:token" json:"token,omitempty"`
+	CreateTime time.Time `gorm:"column:create_time" json:"create_time,omitempty"`
 }
 
 func (User) TableName() string {
@@ -56,6 +56,28 @@ func (*UserDao) QueryUserByNameToken(username string, token string) (*User, erro
 	}
 
 	util.Logger.Info("Query User userId = " + strconv.FormatInt(user.Id, 10) + " , usertoken = " + user.Token)
+
+	return &user, nil
+}
+
+// check if the user exists
+// user exist return (&user, nil)
+// doesn't exist return (nil, nil)
+// other error return(nil, err)
+func (*UserDao) QueryUserByIdToken(uid int64, token string) (*User, error) {
+	var user User
+
+	// SQL: SELECT * FROM `userinfo` WHERE id = x and token = y ORDER BY id LIMIT 1;
+	err := db.Where("id = ? AND token = ?", uid, token).First(&user).Error
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		util.Logger.Error("Query User ErrRecordNotFound")
+		return nil, err
+	}
+	if err != nil {
+		util.Logger.Error("Query User Error: " + err.Error())
+		return nil, err
+	}
 
 	return &user, nil
 }

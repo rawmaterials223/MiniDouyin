@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/rawmaterials223/MiniDouyin/repository"
+	"github.com/rawmaterials223/MiniDouyin/util"
 )
 
 func Md5(str string) string {
@@ -47,7 +48,7 @@ func NewLoginFlow(username, password string) *UserFlow {
 	}
 }
 
-func Info(uid, token string) error {
+func Info(uid, token string) (*User, error) {
 	return NewUserInfoFlow(uid, token).Do()
 }
 
@@ -59,6 +60,14 @@ func NewUserInfoFlow(uid, token string) *UserInfoFlow {
 	}
 }
 
+type User struct {
+	Id            int64  `json:"id"`
+	Name          string `json:"name"`
+	FollowCount   int    `json:"follow_count"`
+	FollowerCount int    `json:"follower_count"`
+	IsFollow      bool   `json:"is_follow"`
+}
+
 type UserFlow struct {
 	username string
 	password string
@@ -68,18 +77,18 @@ type UserFlow struct {
 }
 
 type UserInfoFlow struct {
-	userId         int64
-	token          string
-	username       string
-	follow_count   int
-	follower_count int
-	is_follow      bool
+	userId  int64
+	token   string
+	AllInfo *User
+
+	UserInfo     *repository.User
+	UserRelation *repository.UserRelationCount
 }
 
 func (f *UserFlow) DoRegister() (int64, string, error) {
 
 	// check if user existed
-	exist, _ := f.IsExistedUser()
+	exist, _ := f.CheckUserByNameToken()
 	if exist {
 		return 0, "", &ResponseError{1, "register error: user existed"}
 	}
@@ -95,7 +104,7 @@ func (f *UserFlow) DoRegister() (int64, string, error) {
 func (f *UserFlow) DoLogin() (int64, string, error) {
 
 	// check if user existed
-	exist, _ := f.IsExistedUser()
+	exist, _ := f.CheckUserByNameToken()
 	if !exist {
 		return 0, "", &ResponseError{1, "register error: user doesn't exist"}
 	}
@@ -104,10 +113,10 @@ func (f *UserFlow) DoLogin() (int64, string, error) {
 	return f.userId, f.token, nil
 }
 
-// 功能：检查用户是否存在
+// 功能：检查用户是否存在，通过昵称和密码
 // 用户存在-(true, nil)
 // 用户不存在-(false, err)
-func (f *UserFlow) IsExistedUser() (bool, error) {
+func (f *UserFlow) CheckUserByNameToken() (bool, error) {
 
 	// receive result from repository layer
 	// user exist return (&user, nil)
@@ -119,12 +128,10 @@ func (f *UserFlow) IsExistedUser() (bool, error) {
 		return false, err
 	}
 
-	fmt.Println("QueryUserByNameToken success")
+	util.Logger.Info("QueryUserByNameToken success")
 
 	f.userId = user.Id
 	f.token = user.Token
-
-	fmt.Printf("isExistedUser userId = %d", f.userId)
 
 	return true, nil
 }
@@ -151,7 +158,66 @@ func (f *UserFlow) CreateUser() error {
 	return nil
 }
 
-func (f *UserInfoFlow) Do() error {
+func (f *UserInfoFlow) CheckUserByIdToken() (bool, error) {
+
+	user, err := repository.NewUserDaoInstance().QueryUserByIdToken(f.userId, f.token)
+
+	if err != nil {
+		return false, err
+	}
+
+	util.Logger.Info("QueryUserByIdToken success")
+
+	f.UserInfo = &repository.User{
+		Id:   user.Id,
+		Name: user.Name,
+	}
+
+	return true, nil
+}
+
+func (f *UserInfoFlow) PackRelation() error {
+
+	follow_count, follower_count, _ := repository.NewRelationDaoInstance().CalculateRelation(f.userId)
+	f.UserRelation = &repository.UserRelationCount{
+		FollowCount:   int(follow_count),
+		FollowerCount: int(follower_count),
+		IsFollow:      true,
+	}
 
 	return nil
+}
+
+func (f *UserInfoFlow) PackAllInfo() error {
+
+	f.AllInfo = &User{
+		Id:            f.UserInfo.Id,
+		Name:          f.UserInfo.Name,
+		FollowCount:   f.UserRelation.FollowCount,
+		FollowerCount: f.UserRelation.FollowerCount,
+		IsFollow:      f.UserRelation.IsFollow,
+	}
+
+	util.Logger.Info("PackAllInfo success")
+	return nil
+}
+
+func (f *UserInfoFlow) Do() (*User, error) {
+
+	// 检查用户是否存在
+	exist, _ := f.CheckUserByIdToken()
+	if !exist {
+		return nil, &ResponseError{1, "user doesn't exist"}
+	}
+
+	// 计算关注数follow_count，粉丝数follower_count，是否关注is_follow
+	if err := f.PackRelation(); err != nil {
+		return nil, err
+	}
+
+	if err := f.PackAllInfo(); err != nil {
+		return nil, err
+	}
+
+	return f.AllInfo, nil
 }
