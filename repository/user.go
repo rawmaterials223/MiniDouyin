@@ -2,10 +2,11 @@ package repository
 
 import (
 	"errors"
-	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
+	"github.com/rawmaterials223/MiniDouyin/util"
 	"gorm.io/gorm"
 )
 
@@ -46,13 +47,15 @@ func (*UserDao) QueryUserByNameToken(username string, token string) (*User, erro
 
 	// 没有找到记录,ErrRecordNotFound与First配合使用
 	if errors.Is(err, gorm.ErrRecordNotFound) {
+		util.Logger.Error("Query User ErrRecordNotFound")
 		return nil, err
 	}
 	if err != nil {
+		util.Logger.Error("Query User Error: " + err.Error())
 		return nil, err
 	}
 
-	fmt.Printf("Query User userId = %d, usertoken = %v ", user.Id, user.Token)
+	util.Logger.Info("Query User userId = " + strconv.FormatInt(user.Id, 10) + " , usertoken = " + user.Token)
 
 	return &user, nil
 }
@@ -63,6 +66,7 @@ func (*UserDao) CreateUser(user *User) error {
 	err := db.Create(&user).Error
 
 	if err != nil {
+		util.Logger.Error("Create User Error: " + err.Error())
 		return err
 	}
 

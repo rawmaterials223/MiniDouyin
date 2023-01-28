@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/rawmaterials223/MiniDouyin/repository"
@@ -24,25 +25,37 @@ func (r *ResponseError) Error() string {
 	return fmt.Sprintf("%v", r.Message)
 }
 
-func Register(username string, password string) (int64, string, error) {
+func Register(username, password string) (int64, string, error) {
 	return NewRegisterFlow(username, password).DoRegister()
 }
 
-func NewRegisterFlow(username string, password string) *UserFlow {
+func NewRegisterFlow(username, password string) *UserFlow {
 	return &UserFlow{
 		username: username,
 		password: password,
 	}
 }
 
-func Login(username string, password string) (int64, string, error) {
+func Login(username, password string) (int64, string, error) {
 	return NewLoginFlow(username, password).DoLogin()
 }
 
-func NewLoginFlow(username string, password string) *UserFlow {
+func NewLoginFlow(username, password string) *UserFlow {
 	return &UserFlow{
 		username: username,
 		password: password,
+	}
+}
+
+func Info(uid, token string) error {
+	return NewUserInfoFlow(uid, token).Do()
+}
+
+func NewUserInfoFlow(uid, token string) *UserInfoFlow {
+	s, _ := strconv.ParseInt(uid, 10, 64)
+	return &UserInfoFlow{
+		userId: s,
+		token:  token,
 	}
 }
 
@@ -52,6 +65,15 @@ type UserFlow struct {
 
 	userId int64
 	token  string
+}
+
+type UserInfoFlow struct {
+	userId         int64
+	token          string
+	username       string
+	follow_count   int
+	follower_count int
+	is_follow      bool
 }
 
 func (f *UserFlow) DoRegister() (int64, string, error) {
@@ -125,6 +147,11 @@ func (f *UserFlow) CreateUser() error {
 	f.token = user.Token
 
 	fmt.Printf("CreateUser userId = %d", f.userId)
+
+	return nil
+}
+
+func (f *UserInfoFlow) Do() error {
 
 	return nil
 }

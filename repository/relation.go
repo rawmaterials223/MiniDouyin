@@ -2,9 +2,10 @@ package repository
 
 import (
 	"errors"
-	"fmt"
+	"strconv"
 	"sync"
 
+	"github.com/rawmaterials223/MiniDouyin/util"
 	"gorm.io/gorm"
 )
 
@@ -41,18 +42,64 @@ func (*RelationDao) QueryUserByToken(token string) (int64, error) {
 
 	// 没有找到记录,ErrRecordNotFound与First配合使用
 	if errors.Is(err, gorm.ErrRecordNotFound) {
+		util.Logger.Error("Query User ErrRecordNotFound")
 		return 0, err
 	}
 	if err != nil {
+		util.Logger.Error("Query User Error: " + err.Error())
 		return 0, err
 	}
 
-	fmt.Printf("Query User userId = %d, usertoken = %v ", user.Id, user.Token)
+	util.Logger.Info("Query User userId = " + strconv.FormatInt(user.Id, 10) + " , usertoken = " + user.Token)
 
 	return user.Id, nil
 }
 
-func (*RelationDao) CreateAction(relation *UserRelation) error {
+// 查询：用户关系记录
+func (*RelationDao) QueryRelation(from_id, to_id int64) (int, error) {
+	var relation UserRelation
+
+	// SQL: SELECT * FROM `userrelation` WHERE from_user_id = x AND to_user_id = y ORDER BY id LIMIT 1;
+	err := db.Where("from_user_id = ? AND to_user_id = ?", from_id, to_id).First(&relation).Error
+
+	// 没有找到
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		util.Logger.Error("Query Relation ErrRecordNotFound")
+		return 0, err
+	}
+	if err != nil {
+		util.Logger.Error("Query userrelation Error: " + err.Error())
+		return 0, err
+	}
+
+	return relation.IsFollow, nil
+}
+
+// 更新：用户关系变更，关注/取消关注
+func (*RelationDao) UpdateRelation(relation *UserRelation) error {
+
+	// 不能用save，缺少where条件，会添加转为添加新数据
+	// db.Save(&relation) -> UPDATE userrelation SET from_user_id = x, to_user_id = y, is_follow = z;
+
+	// SQL: UPDATE userrelation SET is_follow = x WHERE from_user_id = y AND to_user_id = z;
+	db.Model(&UserRelation{}).
+		Where("from_user_id = ? AND to_user_id = ?",
+			relation.FromUserId,
+			relation.ToUserId).
+		Update("is_follow",
+			relation.IsFollow)
+
+	util.Logger.Info("Update UserRelation Success")
+	return nil
+}
+
+// 插入：用户关系表插入新数据
+func (*RelationDao) CreateRelation(relation *UserRelation) error {
+
+	if err := db.Create(&relation).Error; err != nil {
+		util.Logger.Error("Create UserRelation Error: " + err.Error())
+		return err
+	}
 
 	return nil
 }

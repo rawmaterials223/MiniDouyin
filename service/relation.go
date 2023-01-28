@@ -4,9 +4,11 @@ import (
 	"fmt"
 
 	"github.com/rawmaterials223/MiniDouyin/repository"
+	"github.com/rawmaterials223/MiniDouyin/util"
 )
 
 // 关注类型全局变量
+var NoneActionType int = 0 // 无记录
 var DoActionType int = 1   // 关注
 var UndoActionType int = 2 // 取消关注
 
@@ -53,19 +55,35 @@ func (f *RelationFlow) DoAction() error {
 
 	f.from_user_id = uid
 
-	//2. 如果action=2，则检查relation表中是否有关注记录
-	//3. 如果action=1，relation表中新增关注；如果action=2，删除记录
 	relation := &repository.UserRelation{
 		FromUserId: f.from_user_id,
 		ToUserId:   f.to_user_id,
 		IsFollow:   f.action,
 	}
 
-	if err := repository.NewRelationDaoInstance().CreateAction(relation); err != nil {
+	// 查询是否有关注/取消关注记录
+	// 不存在/查询结果无，返回0
+	// 存在，返回原记录
+	action, _ := repository.NewRelationDaoInstance().QueryRelation(f.from_user_id, f.to_user_id)
+	// 确认存在记录，且action不同
+	if action != NoneActionType {
+		if action != f.action {
+			repository.NewRelationDaoInstance().UpdateRelation(relation)
+			return nil
+		} else {
+			return &RelationError{
+				Status:  1,
+				Message: "Identical Operation",
+			}
+		}
+	}
+
+	// 首次关注，添加记录
+	if err := repository.NewRelationDaoInstance().CreateRelation(relation); err != nil {
 		return err
 	}
 
-	fmt.Printf("CreateAction done")
+	util.Logger.Info("RelationAction done")
 
 	return nil
 }
@@ -78,8 +96,6 @@ func (f *RelationFlow) IsExistedUser() (bool, int64, error) {
 	if err != nil {
 		return false, 0, err
 	}
-
-	fmt.Println("QueryUserByToken success")
 
 	return true, from_uid, nil
 }

@@ -30,7 +30,7 @@ type UserLoginResponse struct {
 
 type UserResponse struct {
 	Response
-	User User `json:"user"`
+	User interface{} `json:"user"`
 }
 
 func Register(c *gin.Context) {
@@ -100,16 +100,24 @@ func Login(c *gin.Context) {
 }
 
 func UserInfo(c *gin.Context) {
+	//uid := c.Query("user_id")
 	token := c.Query("token")
 
 	if user, exist := usersLoginInfo[token]; exist {
-		c.JSON(http.StatusOK, UserResponse{
-			Response: Response{StatusCode: 0},
-			User:     user,
-		})
+		c.JSON(
+			http.StatusOK,
+			UserResponse{
+				Response: Response{StatusCode: 0},
+				User:     user,
+			})
 	} else {
-		c.JSON(http.StatusOK, UserResponse{
-			Response: Response{StatusCode: 1, StatusMsg: "User doesn't exist"},
-		})
+		c.JSON(
+			http.StatusOK,
+			UserResponse{
+				Response: Response{
+					StatusCode: 1,
+					StatusMsg:  "User doesn't exist",
+				},
+			})
 	}
 }
