@@ -48,7 +48,7 @@ func (f *VideoFlow) Do() error {
 	// 视频文件存储在本地
 	filename := filepath.Base(f.data.Filename)
 	finalName := fmt.Sprintf("%d_%s", uid, filename)
-	saveFile := filepath.Join("./public/", finalName)
+	saveFile := filepath.Join("./public/video/", finalName)
 	util.Logger.Info("video title: " + f.title + ", file path: " + saveFile)
 
 	var c *gin.Context
