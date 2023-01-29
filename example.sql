@@ -41,11 +41,12 @@ CREATE TABLE `message`
 DROP TABLE IF EXISTS `video`;
 CREATE TABLE `video`
 (
-    `id`        bigint(20) unsigned NOT NULL AUTO_INCREMENT COMMENT '主键id',
-    `user_id`   bigint(20) unsigned NOT NULL COMMENT '发视频用户id',
-    `play_url`  varchar(128)        NOT NULL COMMENT '视频播放地址',
-    `cover_url` varchar(128)        NOT NULL COMMENT '视频封面地址',
-    `title`     varchar(128)        NOT NULL COMMENT '视频标题',
+    `id`            bigint(20) unsigned NOT NULL AUTO_INCREMENT COMMENT '主键id',
+    `user_id`       bigint(20) unsigned NOT NULL COMMENT '发视频用户id',
+    `play_url`      varchar(128)        NOT NULL COMMENT '视频播放地址',
+    `cover_url`     varchar(128)        NOT NULL COMMENT '视频封面地址',
+    `title`         varchar(128)        NOT NULL COMMENT '视频标题',
+    `create_time`   timestamp           NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '视频发布时间',
     PRIMARY KEY (`id`),
     FOREIGN KEY(`user_id`) REFERENCES `userinfo`(`id`)
 ) ENGINE = InnoDB
