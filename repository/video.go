@@ -34,6 +34,25 @@ func NewVideoDaoInstance() *VideoDao {
 	return videoDao
 }
 
+func (f *VideoDao) QueryVideoByUid(uid int64) ([]Video, error) {
+	var videos []Video
+
+	// 查找单个对象
+	// SQL: select * from video where user_id = x ORDER BY id LIMIT 1;
+	// err := db.Where("user_id = ?", uid).First(&video).Error
+
+	// 查找多个对象
+	// SQL: select * from video where user_id = x;
+	result := db.Where("user_id = ?", uid).Find(&videos)
+
+	if result.Error != nil {
+		util.Logger.Error("Query Video Error")
+		return nil, result.Error
+	}
+
+	return videos, nil
+}
+
 func (f *VideoDao) CreateVideo(video *Video) error {
 
 	err := db.Create(&video).Error

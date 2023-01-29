@@ -158,6 +158,26 @@ func (f *UserFlow) CreateUser() error {
 	return nil
 }
 
+func (f *UserInfoFlow) Do() (*User, error) {
+
+	// 检查用户是否存在
+	exist, _ := f.CheckUserByIdToken()
+	if !exist {
+		return nil, &ResponseError{1, "user doesn't exist"}
+	}
+
+	// 计算关注数follow_count，粉丝数follower_count，是否关注is_follow
+	if err := f.PackRelation(); err != nil {
+		return nil, err
+	}
+
+	if err := f.PackAllInfo(); err != nil {
+		return nil, err
+	}
+
+	return f.AllInfo, nil
+}
+
 func (f *UserInfoFlow) CheckUserByIdToken() (bool, error) {
 
 	user, err := repository.NewUserDaoInstance().QueryUserByIdToken(f.userId, f.token)
@@ -200,24 +220,4 @@ func (f *UserInfoFlow) PackAllInfo() error {
 
 	util.Logger.Info("PackAllInfo success")
 	return nil
-}
-
-func (f *UserInfoFlow) Do() (*User, error) {
-
-	// 检查用户是否存在
-	exist, _ := f.CheckUserByIdToken()
-	if !exist {
-		return nil, &ResponseError{1, "user doesn't exist"}
-	}
-
-	// 计算关注数follow_count，粉丝数follower_count，是否关注is_follow
-	if err := f.PackRelation(); err != nil {
-		return nil, err
-	}
-
-	if err := f.PackAllInfo(); err != nil {
-		return nil, err
-	}
-
-	return f.AllInfo, nil
 }

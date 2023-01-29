@@ -9,7 +9,7 @@ import (
 
 type VideoListResponse struct {
 	Response
-	VideoList []Video `json:"video_list"`
+	VideoList []service.Video `json:"video_list"`
 }
 
 // Publish check token then save upload file to public directory
@@ -40,30 +40,34 @@ func Publish(c *gin.Context) {
 			http.StatusOK,
 			Response{
 				StatusCode: 0,
-				StatusMsg:  "upload successfully",
+				StatusMsg:  title + " upload successfully",
 			})
 	}
-	/*
-		filename := filepath.Base(data.Filename)
-		user := usersLoginInfo[token]
-		finalName := fmt.Sprintf("%d_%s", user.Id, filename)
-		saveFile := filepath.Join("./public/", finalName)
-		if err := c.SaveUploadedFile(data, saveFile); err != nil {
-			c.JSON(http.StatusOK, Response{
-				StatusCode: 1,
-				StatusMsg:  err.Error(),
-			})
-			return
-		}
-	*/
 }
 
 // PublishList all users have same publish video list
 func PublishList(c *gin.Context) {
-	c.JSON(http.StatusOK, VideoListResponse{
-		Response: Response{
-			StatusCode: 0,
-		},
-		VideoList: DemoVideos,
-	})
+	token := c.Query("token")
+	uid := c.Query("user_id")
+
+	videoList, err := service.PublishList(token, uid)
+	if err != nil {
+		c.JSON(
+			http.StatusOK,
+			Response{
+				StatusCode: 1,
+				StatusMsg:  err.Error(),
+			})
+	} else {
+		c.JSON(
+			http.StatusOK,
+			VideoListResponse{
+				Response: Response{
+					StatusCode: 0,
+					StatusMsg:  "list",
+				},
+				VideoList: videoList,
+			})
+	}
+
 }
