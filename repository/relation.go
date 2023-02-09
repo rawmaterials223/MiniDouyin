@@ -9,19 +9,6 @@ import (
 	"gorm.io/gorm"
 )
 
-type UserRelation struct {
-	Id         int64 `gorm:"column:id"`
-	FromUserId int64 `gorm:"column:from_user_id"`
-	ToUserId   int64 `gorm:"column:to_user_id"`
-	IsFollow   int   `gorm:"column:is_follow"`
-}
-
-type UserRelationCount struct {
-	FollowCount   int  `json:"follow_count"`
-	FollowerCount int  `json:"follower_count"`
-	IsFollow      bool `json:"is_follow"`
-}
-
 func (UserRelation) TableName() string {
 	return "userrelation"
 }
@@ -61,7 +48,7 @@ func (*RelationDao) QueryUserByToken(token string) (int64, error) {
 	return user.Id, nil
 }
 
-// 查询：用户关系记录
+// 查询：用户关系记录，是否关注
 func (*RelationDao) QueryRelation(from_id, to_id int64) (int, error) {
 	var relation UserRelation
 
@@ -110,7 +97,7 @@ func (*RelationDao) CreateRelation(relation *UserRelation) error {
 	return nil
 }
 
-// 查询：计算用户的关注数和粉丝数
+// 【勿删，有用】查询：计算用户的关注数和粉丝数
 func (*RelationDao) CalculateRelation(uid int64) (int64, int64, error) {
 	var follow_count int64
 	var follower_count int64
@@ -124,4 +111,50 @@ func (*RelationDao) CalculateRelation(uid int64) (int64, int64, error) {
 	db.Model(&UserRelation{}).Where("to_user_id = ? AND is_follow = ?", uid, 1).Count(&follower_count)
 
 	return follow_count, follower_count, nil
+}
+
+// 查询：查询用户uid的关注数和粉丝数
+func (*RelationDao) Calcualte(uid int64) (UserResult, error) {
+	var userResult UserResult
+	/*
+		SELECT t1.id, t1.name, t2.follow_count, t3.follower_count
+		FROM userinfo as t1
+		LEFT JOIN
+			(
+				SELECT from_user_id as uid, count(to_user_id) as follow_count
+				FROM `userrelation`
+				WHERE is_follow = 1
+				GROUP BY from_user_id
+			) as t2
+		on t1.id = t2.uid
+		LEFT JOIN
+			(
+				SELECT to_user_id as uid, count(from_user_id) as follower_count
+				FROM `userrelation`
+				WHERE is_follow = 1
+				GROUP BY to_user_id
+			) as t3
+		ON t1.id = t3.uid
+		WHERE t1.id = 1;
+	*/
+	query1 := db.Table("userrelation").
+		Select("from_user_id as uid, count(to_user_id) as follow_count").
+		Where("is_follow = ?", 1).
+		Group("from_user_id")
+	query2 := db.Table("userrelation").
+		Select("to_user_id as uid, count(from_user_id) as follower_count").
+		Where("is_follow = ?", 1).
+		Group("to_user_id")
+	result := db.Table("userinfo").
+		Select("id, name, t1.follow_count, t2.follower_count").
+		Joins("left join (?) t1 on userinfo.id = t1.uid", query1).
+		Joins("left join (?) t2 on userinfo.id = t2.uid", query2).
+		Where("id = ?", uid).
+		Scan(&userResult)
+
+	if result.Error != nil {
+		util.Logger.Error("Calculate User Error")
+		return userResult, result.Error
+	}
+	return userResult, nil
 }

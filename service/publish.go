@@ -42,10 +42,10 @@ type Video struct {
 	Author        User   `json:"author"`
 	PlayUrl       string `json:"play_url"`
 	CoverUrl      string `json:"cover_url"`
-	FavoriteCount int64  `json:"favorite_count,omitempty"`
-	CommentCount  int64  `json:"comment_count,omitempty"`
-	IsFavorite    bool   `json:"is_favorite,omitempty"`
-	Title         string `json:"title,omitempty"`
+	FavoriteCount int64  `json:"favorite_count"`
+	CommentCount  int64  `json:"comment_count"`
+	IsFavorite    bool   `json:"is_favorite"`
+	Title         string `json:"title"`
 }
 type VideoFlow struct {
 	token string
@@ -56,9 +56,9 @@ type VideoListFlow struct {
 	token  string
 	userId int64
 
-	UserInfo     *repository.User
-	UserRelation *repository.UserRelationCount
-	VideoList    []repository.Video
+	UserInfo        *repository.User
+	UserRelation    *repository.UserRelationCount
+	VideoResultList []repository.VideoResult
 }
 
 func (f *VideoFlow) Do() error {
@@ -164,13 +164,14 @@ func (f *VideoListFlow) Do() ([]Video, error) {
 	}
 
 	var VideoList []Video
-	for _, v := range f.VideoList {
+	for _, v := range f.VideoResultList {
 		newV := Video{
-			Id:       v.Id,
-			Author:   author,
-			PlayUrl:  v.PlayUrl,
-			CoverUrl: v.CoverUrl,
-			Title:    v.Title,
+			Id:            v.Id,
+			Author:        author,
+			PlayUrl:       v.PlayUrl,
+			CoverUrl:      v.CoverUrl,
+			FavoriteCount: v.FavoriteCount,
+			Title:         v.Title,
 		}
 		VideoList = append(VideoList, newV)
 	}
@@ -206,8 +207,8 @@ func (f *VideoListFlow) PackRelation() error {
 
 // 查找用户的所有视频，返回videos数组后重新构造
 func (f *VideoListFlow) PackVideos() error {
-	videos, _ := repository.NewVideoDaoInstance().QueryVideoByUid(f.userId)
-	f.VideoList = videos
+	videoResults, _ := repository.NewVideoDaoInstance().QueryVideoByUid(f.userId)
+	f.VideoResultList = videoResults
 
 	return nil
 }

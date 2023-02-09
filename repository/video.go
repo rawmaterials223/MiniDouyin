@@ -2,19 +2,9 @@ package repository
 
 import (
 	"sync"
-	"time"
 
 	"github.com/rawmaterials223/MiniDouyin/util"
 )
-
-type Video struct {
-	Id         int64     `gorm:"column:id"`
-	UserId     int64     `gorm:"column:user_id"`
-	PlayUrl    string    `gorm:"column:play_url"`
-	CoverUrl   string    `gorm:"column:cover_url"`
-	Title      string    `gorm:"column:title"`
-	CreateTime time.Time `gorm:"column:create_time"`
-}
 
 func (Video) TableName() string {
 	return "video"
@@ -34,23 +24,40 @@ func NewVideoDaoInstance() *VideoDao {
 	return videoDao
 }
 
-func (f *VideoDao) QueryVideoByUid(uid int64) ([]Video, error) {
-	var videos []Video
+// 查询：查询用户uid的所有视频信息，包含点赞和评论数
+func (f *VideoDao) QueryVideoByUid(uid int64) ([]VideoResult, error) {
+	var videoResults []VideoResult
 
-	// 查找单个对象
-	// SQL: select * from video where user_id = x ORDER BY id LIMIT 1;
-	// err := db.Where("user_id = ?", uid).First(&video).Error
-
-	// 查找多个对象
-	// SQL: select * from video where user_id = x;
-	result := db.Where("user_id = ?", uid).Find(&videos)
+	/** SQL:
+	SELECT t1.id, t1.play_url, t1.cover_url, t2.favorite_count, t1.title
+	FROM `video` as t1
+		left join
+		(SELECT to_video_id as vid, count(from_user_id) as favorite_count
+		 FROM `videorelation`
+		 WHERE is_like = 1
+		 GROUP BY to_video_id) as t2
+	on t1.id = t2.vid
+	where user_id = x;
+	*/
+	query := db.Table("videorelation").
+		Select("to_video_id as vid, count(from_user_id) as favorite_count").
+		Where("is_like = ?", 1).
+		Group("to_video_id")
+	result := db.Table("video").
+		Select("video.id, video.play_url, video.cover_url, t2.favorite_count,0, video.title").
+		Joins("left join (?) t2 on video.id = t2.vid", query).
+		Where("user_id = ?", uid).
+		Scan(&videoResults)
 
 	if result.Error != nil {
 		util.Logger.Error("Query Video Error")
 		return nil, result.Error
 	}
+	// 查找多个对象
+	// SQL: select * from video where user_id = x;
+	//result = db.Where("user_id = ?", uid).Find(&videos)
 
-	return videos, nil
+	return videoResults, nil
 }
 
 func (f *VideoDao) CreateVideo(video *Video) error {

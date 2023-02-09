@@ -7,10 +7,12 @@ import (
 
 type Comment struct {
 	Id         int64     `gorm:"column:id"`
-	VideoId    int64     `gorm:"column:video_id"`
-	UserId     int64     `gorm:"column:user_id"`
+	FromUserId int64     `gorm:"column:from_user_id"`
+	ToVideoId  int64     `gorm:"column:to_video_id"`
 	Content    string    `gorm:"column:content"`
+	Status     int       `gorm:"column:status"`
 	CreateTime time.Time `gorm:"column:create_time"`
+	UpdateTime time.Time `gorm:"column:update_time"`
 }
 
 func (Comment) TableName() string {

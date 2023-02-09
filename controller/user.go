@@ -30,7 +30,7 @@ type UserLoginResponse struct {
 
 type UserResponse struct {
 	Response
-	User *service.User `json:"user"`
+	User service.UserResultDemo `json:"user"`
 }
 
 func Register(c *gin.Context) {

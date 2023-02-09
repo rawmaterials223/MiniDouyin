@@ -48,7 +48,7 @@ func NewLoginFlow(username, password string) *UserFlow {
 	}
 }
 
-func Info(uid, token string) (*User, error) {
+func Info(uid, token string) (UserResultDemo, error) {
 	return NewUserInfoFlow(uid, token).Do()
 }
 
@@ -60,6 +60,9 @@ func NewUserInfoFlow(uid, token string) *UserInfoFlow {
 	}
 }
 
+type UserResultDemo *repository.UserResult
+
+// 勿删，有用
 type User struct {
 	Id            int64  `json:"id"`
 	Name          string `json:"name"`
@@ -77,12 +80,10 @@ type UserFlow struct {
 }
 
 type UserInfoFlow struct {
-	userId  int64
-	token   string
-	AllInfo *User
+	userId int64
+	token  string
 
-	UserInfo     *repository.User
-	UserRelation *repository.UserRelationCount
+	UserResult UserResultDemo
 }
 
 func (f *UserFlow) DoRegister() (int64, string, error) {
@@ -158,7 +159,7 @@ func (f *UserFlow) CreateUser() error {
 	return nil
 }
 
-func (f *UserInfoFlow) Do() (*User, error) {
+func (f *UserInfoFlow) Do() (*repository.UserResult, error) {
 
 	// 检查用户是否存在
 	exist, _ := f.CheckUserByIdToken()
@@ -167,20 +168,16 @@ func (f *UserInfoFlow) Do() (*User, error) {
 	}
 
 	// 计算关注数follow_count，粉丝数follower_count，是否关注is_follow
-	if err := f.PackRelation(); err != nil {
+	if err := f.QueryUserRelationById(); err != nil {
 		return nil, err
 	}
 
-	if err := f.PackAllInfo(); err != nil {
-		return nil, err
-	}
-
-	return f.AllInfo, nil
+	return f.UserResult, nil
 }
 
 func (f *UserInfoFlow) CheckUserByIdToken() (bool, error) {
 
-	user, err := repository.NewUserDaoInstance().QueryUserByIdToken(f.userId, f.token)
+	_, err := repository.NewUserDaoInstance().QueryUserByIdToken(f.userId, f.token)
 
 	if err != nil {
 		return false, err
@@ -188,36 +185,25 @@ func (f *UserInfoFlow) CheckUserByIdToken() (bool, error) {
 
 	util.Logger.Info("QueryUserByIdToken success")
 
-	f.UserInfo = &repository.User{
-		Id:   user.Id,
-		Name: user.Name,
-	}
-
 	return true, nil
 }
 
-func (f *UserInfoFlow) PackRelation() error {
+func (f *UserInfoFlow) QueryUserRelationById() error {
+	userResult, err := repository.NewRelationDaoInstance().Calcualte(f.userId)
 
-	follow_count, follower_count, _ := repository.NewRelationDaoInstance().CalculateRelation(f.userId)
-	f.UserRelation = &repository.UserRelationCount{
-		FollowCount:   int(follow_count),
-		FollowerCount: int(follower_count),
-		IsFollow:      true,
+	if err != nil {
+		return err
 	}
 
-	return nil
-}
+	isFollow, _ := repository.NewRelationDaoInstance().QueryRelation(f.userId, f.userId)
 
-func (f *UserInfoFlow) PackAllInfo() error {
-
-	f.AllInfo = &User{
-		Id:            f.UserInfo.Id,
-		Name:          f.UserInfo.Name,
-		FollowCount:   f.UserRelation.FollowCount,
-		FollowerCount: f.UserRelation.FollowerCount,
-		IsFollow:      f.UserRelation.IsFollow,
+	f.UserResult = &userResult
+	if isFollow == DoActionType {
+		f.UserResult.IsFollow = true
+	} else {
+		f.UserResult.IsFollow = false
 	}
+	util.Logger.Info("QueryUserResult success")
 
-	util.Logger.Info("PackAllInfo success")
 	return nil
 }

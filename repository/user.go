@@ -4,18 +4,10 @@ import (
 	"errors"
 	"strconv"
 	"sync"
-	"time"
 
 	"github.com/rawmaterials223/MiniDouyin/util"
 	"gorm.io/gorm"
 )
-
-type User struct {
-	Id         int64     `gorm:"column:id" json:"id"`
-	Name       string    `gorm:"column:name" json:"name"`
-	Token      string    `gorm:"column:token" json:"token,omitempty"`
-	CreateTime time.Time `gorm:"column:create_time" json:"create_time,omitempty"`
-}
 
 func (User) TableName() string {
 	return "userinfo"

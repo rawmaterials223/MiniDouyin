@@ -52,14 +52,16 @@ CREATE TABLE `video`
 ) ENGINE = InnoDB
     DEFAULT CHARSET = utf8mb4 COMMENT = '视频表';
 
-DROP TABLE IF EXISTS `uservideo`;
-CREATE TABLE `uservideo`
+DROP TABLE IF EXISTS `videorelation`;
+CREATE TABLE `videorelation`
 (
     `id`            bigint(20) unsigned NOT NULL AUTO_INCREMENT COMMENT '主键id',
     `from_user_id`  bigint(20) unsigned NOT NULL COMMENT '点赞用户id',
     `to_video_id`   bigint(20) unsigned NOT NULL COMMENT '点赞视频id',
     `is_like`       int                 NOT NULL DEFAULT 1  COMMENT '是否点赞',  
-    PRIMARY KEY (`id`)
+    PRIMARY KEY (`id`),
+    FOREIGN KEY(`from_user_id`) REFERENCES `userinfo`(`id`),
+    FOREIGN KEY(`to_video_id`) REFERENCES `video`(`id`)
 ) ENGINE = InnoDB
     DEFAULT CHARSET = utf8mb4 COMMENT = '用户视频关系表';
 
@@ -67,11 +69,15 @@ DROP TABLE IF EXISTS `comment`;
 CREATE TABLE `comment`
 (
     `id`            bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-    `video_id`      bigint(20) unsigned NOT NULL,
-    `user_id`       bigint(20) unsigned NOT NULL,
-    `content`       text                NOT NULL,
-    `create_time`   timestamp           NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (`id`)
+    `from_user_id`  bigint(20) unsigned NOT NULL COMMENT '评论用户id',    
+    `to_video_id`   bigint(20) unsigned NOT NULL COMMENT '评论视频id',
+    `content`       text                NOT NULL COMMENT '评论内容',
+    `status`        int                 NOT NULL DEFAULT 1 COMMENT '存在、修改、删除',
+    `create_time`   timestamp           NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '评论创建时间',
+    `update_time`   timestamp           COMMENT '评论修改或删除时间',
+    PRIMARY KEY (`id`),
+    FOREIGN KEY (`from_user_id`) REFERENCES `userinfo`(`id`),
+    FOREIGN KEY (`to_video_id`) REFERENCES `video`(`id`)
 ) ENGINE = InnoDB
     DEFAULT CHARSET = utf8mb4 COMMENT = '评论表';
 
