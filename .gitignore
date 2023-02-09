@@ -20,6 +20,9 @@
 # Go workspace file
 go.work
 
+# IDEA & VScode
 .idea
+.vscode
+
 
 public/video/
