@@ -25,7 +25,7 @@ func NewVideoFlow(token, title string, data *multipart.FileHeader) *VideoFlow {
 	}
 }
 
-func PublishList(token, uid string) ([]Video, error) {
+func PublishList(token, uid string) (VideoList, error) {
 	return NewVideoListFlow(token, uid).Do()
 }
 
@@ -37,15 +37,18 @@ func NewVideoListFlow(token, uid string) *VideoListFlow {
 	}
 }
 
+type VideoList []Video
+type VideoResultListType []repository.VideoResult
+
 type Video struct {
-	Id            int64  `json:"id"`
-	Author        User   `json:"author"`
-	PlayUrl       string `json:"play_url"`
-	CoverUrl      string `json:"cover_url"`
-	FavoriteCount int64  `json:"favorite_count"`
-	CommentCount  int64  `json:"comment_count"`
-	IsFavorite    bool   `json:"is_favorite"`
-	Title         string `json:"title"`
+	Id            int64          `json:"id"`
+	Author        UserResultType `json:"author"`
+	PlayUrl       string         `json:"play_url"`
+	CoverUrl      string         `json:"cover_url"`
+	FavoriteCount int64          `json:"favorite_count"`
+	CommentCount  int64          `json:"comment_count"`
+	IsFavorite    bool           `json:"is_favorite"`
+	Title         string         `json:"title"`
 }
 type VideoFlow struct {
 	token string
@@ -56,9 +59,8 @@ type VideoListFlow struct {
 	token  string
 	userId int64
 
-	UserInfo        *repository.User
-	UserRelation    *repository.UserRelationCount
-	VideoResultList []repository.VideoResult
+	UserResult      UserResultType
+	VideoResultList VideoResultListType
 }
 
 func (f *VideoFlow) Do() error {
@@ -120,7 +122,7 @@ func (f *VideoFlow) CheckUserByToken() (bool, int64, error) {
 	return true, user.Id, nil
 }
 
-func (f *VideoListFlow) Do() ([]Video, error) {
+func (f *VideoListFlow) Do() (VideoList, error) {
 
 	exist, _ := f.CheckUserByIdToken()
 	if !exist {
@@ -134,7 +136,7 @@ func (f *VideoListFlow) Do() ([]Video, error) {
 	// Author 信息
 	go func() {
 		defer wg.Done()
-		if err := f.PackRelation(); err != nil {
+		if err := f.QueryUserRelationById(); err != nil {
 			authorErr = err
 			return
 		}
@@ -155,54 +157,33 @@ func (f *VideoListFlow) Do() ([]Video, error) {
 		return nil, &ResponseError{1, "video list error"}
 	}
 
-	author := User{
-		Id:            f.userId,
-		Name:          f.UserInfo.Name,
-		FollowCount:   f.UserRelation.FollowCount,
-		FollowerCount: f.UserRelation.FollowerCount,
-		IsFollow:      f.UserRelation.IsFollow,
-	}
-
-	var VideoList []Video
+	var videoList VideoList
 	for _, v := range f.VideoResultList {
 		newV := Video{
 			Id:            v.Id,
-			Author:        author,
+			Author:        f.UserResult,
 			PlayUrl:       v.PlayUrl,
 			CoverUrl:      v.CoverUrl,
 			FavoriteCount: v.FavoriteCount,
 			Title:         v.Title,
 		}
-		VideoList = append(VideoList, newV)
+		videoList = append(videoList, newV)
 	}
 
-	return VideoList, nil
+	return videoList, nil
 }
 
 // 查找用户，存在即确认UserInfo
 func (f *VideoListFlow) CheckUserByIdToken() (bool, error) {
-	user, err := repository.NewUserDaoInstance().QueryUserByIdToken(f.userId, f.token)
+	_, err := repository.NewUserDaoInstance().QueryUserByIdToken(f.userId, f.token)
 
 	if err != nil {
 		return false, err
 	}
 
 	util.Logger.Info("QueryUserByIdToken success")
-	f.UserInfo = user
 
 	return true, nil
-}
-
-// 查找用户信息，确认UserRelation
-func (f *VideoListFlow) PackRelation() error {
-	follow_count, follower_count, _ := repository.NewRelationDaoInstance().CalculateRelation(f.userId)
-	f.UserRelation = &repository.UserRelationCount{
-		FollowCount:   int(follow_count),
-		FollowerCount: int(follower_count),
-		IsFollow:      true,
-	}
-
-	return nil
 }
 
 // 查找用户的所有视频，返回videos数组后重新构造
@@ -210,5 +191,24 @@ func (f *VideoListFlow) PackVideos() error {
 	videoResults, _ := repository.NewVideoDaoInstance().QueryVideoByUid(f.userId)
 	f.VideoResultList = videoResults
 
+	return nil
+}
+
+// 查找用户的信息，返回包含关注数和粉丝数的用户信息
+func (f *VideoListFlow) QueryUserRelationById() error {
+	userResult, err := repository.NewRelationDaoInstance().Calcualte(f.userId)
+
+	if err != nil {
+		return err
+	}
+
+	isFollow, _ := repository.NewRelationDaoInstance().QueryRelation(f.userId, f.userId)
+	f.UserResult = &userResult
+	if isFollow == DoActionType {
+		f.UserResult.IsFollow = true
+	} else {
+		f.UserResult.IsFollow = false
+	}
+	util.Logger.Info("QueryUserResult success")
 	return nil
 }

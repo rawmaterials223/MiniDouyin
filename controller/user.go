@@ -20,8 +20,6 @@ var usersLoginInfo = map[string]User{
 	},
 }
 
-//var userIdSequence = int64(1)
-
 type UserLoginResponse struct {
 	Response
 	UserId int64  `json:"user_id"`
@@ -30,7 +28,7 @@ type UserLoginResponse struct {
 
 type UserResponse struct {
 	Response
-	User service.UserResultDemo `json:"user"`
+	User service.UserResultType `json:"user"`
 }
 
 func Register(c *gin.Context) {

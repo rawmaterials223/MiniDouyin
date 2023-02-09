@@ -45,6 +45,12 @@ func (f *FavoriteFlow) DoAction() error {
 	}
 	f.from_user_id = uid
 
+	// 检查视频是否存在
+	exist, _ = f.CheckVideoById()
+	if !exist {
+		return &ResponseError{1, "Video doesn't exist"}
+	}
+
 	f.videoRelation = &repository.VideoRelation{
 		FromUserId: f.from_user_id,
 		ToVideoId:  f.videoId,
@@ -55,6 +61,7 @@ func (f *FavoriteFlow) DoAction() error {
 	// 不存在，返回0
 	// 存在，返回原记录
 	action, _ := f.CheckFavoriteHistory()
+	util.Logger.Info("action is ")
 	if action != NoneFavType {
 		if action != f.action {
 			f.UpdateFavorite()
@@ -66,13 +73,14 @@ func (f *FavoriteFlow) DoAction() error {
 
 	// 首次赞，添加记录
 	if err := f.CreateFavorite(); err != nil {
-		return err
+		return &ResponseError{1, "Create favorite record failed"}
 	}
 
 	util.Logger.Info("FavoriteAction Done")
 	return nil
 }
 
+// 查找用户是否存在
 func (f *FavoriteFlow) CheckUserByToken() (bool, int64, error) {
 	user, err := repository.NewUserDaoInstance().QueryUserByToken(f.token)
 	if err != nil {
@@ -81,6 +89,15 @@ func (f *FavoriteFlow) CheckUserByToken() (bool, int64, error) {
 
 	util.Logger.Info("QueryUserByToken success")
 	return true, user.Id, nil
+}
+
+// 查找视频是否存在
+func (f *FavoriteFlow) CheckVideoById() (bool, error) {
+	video, _ := repository.NewVideoDaoInstance().QueryVideoById(f.videoId)
+	if video == nil {
+		return false, nil
+	}
+	return true, nil
 }
 
 // 查找是否有赞操作

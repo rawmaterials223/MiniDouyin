@@ -48,7 +48,7 @@ func NewLoginFlow(username, password string) *UserFlow {
 	}
 }
 
-func Info(uid, token string) (UserResultDemo, error) {
+func Info(uid, token string) (UserResultType, error) {
 	return NewUserInfoFlow(uid, token).Do()
 }
 
@@ -60,16 +60,7 @@ func NewUserInfoFlow(uid, token string) *UserInfoFlow {
 	}
 }
 
-type UserResultDemo *repository.UserResult
-
-// 勿删，有用
-type User struct {
-	Id            int64  `json:"id"`
-	Name          string `json:"name"`
-	FollowCount   int    `json:"follow_count"`
-	FollowerCount int    `json:"follower_count"`
-	IsFollow      bool   `json:"is_follow"`
-}
+type UserResultType *repository.UserResult
 
 type UserFlow struct {
 	username string
@@ -83,7 +74,7 @@ type UserInfoFlow struct {
 	userId int64
 	token  string
 
-	UserResult UserResultDemo
+	UserResult UserResultType
 }
 
 func (f *UserFlow) DoRegister() (int64, string, error) {

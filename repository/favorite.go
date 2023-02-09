@@ -8,6 +8,14 @@ import (
 	"gorm.io/gorm"
 )
 
+// Videorelation DB
+type VideoRelation struct {
+	Id         int64 `gorm:"column:id"`
+	FromUserId int64 `gorm:"column:from_user_id"`
+	ToVideoId  int64 `gorm:"column:to_video_id"`
+	IsLike     int   `gorm:"column:is_like"`
+}
+
 func (VideoRelation) TableName() string {
 	return "videorelation"
 }
@@ -32,7 +40,7 @@ func (*VideoRelationDao) QueryRelation(uid, vid int64) (int, error) {
 
 	// SQL: SELECT * FROM `videorelation` WHERE from_user_id = x
 	// 		AND to_video_id = y ORDER BY id LIMIT 1;
-	err := db.Where("from_user_id = ? AND to_video_id = ?").First(&relation).Error
+	err := db.Where("from_user_id = ? AND to_video_id = ?", uid, vid).First(&relation).Error
 
 	// 没有找到
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -62,6 +70,7 @@ func (*VideoRelationDao) UpdateRelation(relation *VideoRelation) error {
 	return nil
 }
 
+// 插入：创建新的赞操作
 func (*VideoRelationDao) CreateRelation(relation *VideoRelation) error {
 	if err := db.Create(&relation).Error; err != nil {
 		util.Logger.Error("Create Videorelation error")

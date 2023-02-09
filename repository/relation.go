@@ -9,6 +9,13 @@ import (
 	"gorm.io/gorm"
 )
 
+type UserRelation struct {
+	Id         int64 `gorm:"column:id"`
+	FromUserId int64 `gorm:"column:from_user_id"`
+	ToUserId   int64 `gorm:"column:to_user_id"`
+	IsFollow   int   `gorm:"column:is_follow"`
+}
+
 func (UserRelation) TableName() string {
 	return "userrelation"
 }

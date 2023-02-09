@@ -1,10 +1,23 @@
 package repository
 
 import (
+	"errors"
 	"sync"
+	"time"
 
 	"github.com/rawmaterials223/MiniDouyin/util"
+	"gorm.io/gorm"
 )
+
+// Video DB
+type Video struct {
+	Id         int64     `gorm:"column:id"`
+	UserId     int64     `gorm:"column:user_id"`
+	PlayUrl    string    `gorm:"column:play_url"`
+	CoverUrl   string    `gorm:"column:cover_url"`
+	Title      string    `gorm:"column:title"`
+	CreateTime time.Time `gorm:"column:create_time"`
+}
 
 func (Video) TableName() string {
 	return "video"
@@ -22,6 +35,27 @@ func NewVideoDaoInstance() *VideoDao {
 		})
 
 	return videoDao
+}
+
+// 查询：查询视频id是否存在，存在即返回视频信息
+func (f *VideoDao) QueryVideoById(vid int64) (*Video, error) {
+	var video Video
+
+	// SQL: SELECT * FROM `video` where id = x
+	err := db.Where("id = ?", vid).First(&video).Error
+
+	// 没有找到记录
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		util.Logger.Error("Query Video ErrRecordNotFound")
+		return nil, err
+	}
+	if err != nil {
+		util.Logger.Error("Query Video Error")
+		return nil, err
+	}
+
+	util.Logger.Info("Query Video success")
+	return &video, nil
 }
 
 // 查询：查询用户uid的所有视频信息，包含点赞和评论数
